@@ -129,6 +129,13 @@ architecture REGISTROS_ARCHITECTURE of registros is
     SIGNAL SP: 			std_logic_vector(15 downto 0) := std_logic_vector(to_unsigned(BASE_POINTER, 16));
 						-- SP = Stack Pointer = Puntero de Pila
 	SIGNAL RA: 			std_logic_vector(31 downto 0) := X"00000000";
+
+	-- P10: escritura de FLAGS y FPFLAGS desde la etapa WB (popfl / popfp). Cada registro sigue
+	-- teniendo un unico proceso que lo escribe (ALU_Write / FPU_Write) para evitar dos drivers.
+	SIGNAL FlagsWB:			std_logic_vector(7 downto 0);
+	SIGNAL EnableFlagsWB:	std_logic := '0';
+	SIGNAL FPFlagsWB:		std_logic_vector(7 downto 0);
+	SIGNAL EnableFPFlagsWB:	std_logic := '0';
 						-- RA = Return Address = Dirección de Retorno (Subrutina)
 	
 	-- Registros de Uso General	por el Usuario 
@@ -398,8 +405,12 @@ begin
 	ALU_Write: PROCESS
 	
 	BEGIN
-		WAIT UNTIL rising_edge(EnableRegEXALUWr);
-		FLAGS <= DataRegInEXALU(7 downto 0);	
+		WAIT UNTIL rising_edge(EnableRegEXALUWr) or rising_edge(EnableFlagsWB);
+		if (EnableRegEXALUWr = '1') then
+			FLAGS <= DataRegInEXALU(7 downto 0);
+		else
+			FLAGS <= FlagsWB;		-- P10: popfl
+		end if;
 	END PROCESS ALU_Write;
 	
 	
@@ -414,8 +425,12 @@ begin
 	FPU_Write: PROCESS
 	
 	BEGIN
-		WAIT UNTIL rising_edge(EnableRegEXFPUWr);
-		FPFLAGS <= DataRegInEXFPU(7 downto 0);
+		WAIT UNTIL rising_edge(EnableRegEXFPUWr) or rising_edge(EnableFPFlagsWB);
+		if (EnableRegEXFPUWr = '1') then
+			FPFLAGS <= DataRegInEXFPU(7 downto 0);
+		else
+			FPFLAGS <= FPFlagsWB;	-- P10: popfp
+		end if;
 	END PROCESS FPU_Write;
 	
 	
@@ -785,6 +800,16 @@ begin
 				WAIT FOR 1 ns;
 				EnableRegFP <= '0';
 				WAIT FOR 1 ns;			
+			WHEN ID_FLAGS =>
+				FlagsWB <= DataRegInWB(7 downto 0);
+				EnableFlagsWB <= '1';
+				WAIT FOR 1 ns;
+				EnableFlagsWB <= '0';
+			WHEN ID_FPFLAGS =>
+				FPFlagsWB <= DataRegInWB(7 downto 0);
+				EnableFPFlagsWB <= '1';
+				WAIT FOR 1 ns;
+				EnableFPFlagsWB <= '0';
 			WHEN ID_RA =>
 				for i in 31 downto writeSize loop
 					RA(i) <= 'Z';

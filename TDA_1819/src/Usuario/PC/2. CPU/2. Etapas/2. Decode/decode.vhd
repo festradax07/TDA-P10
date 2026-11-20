@@ -134,8 +134,77 @@ begin
 	VARIABLE rdAux:			INTEGER;
 	VARIABLE addrAux:		INTEGER; 
 	VARIABLE idAux:			INTEGER := 0;
-	
-	BEGIN 
+
+	-- P10: DoPush apila 'size' bytes del registro 'idReg' (r0-r15, FLAGS, FPFLAGS o RA).
+	-- Generaliza la implementacion original de PUSHH: en esta etapa se lee el registro,
+	-- se decrementa el SP en 'size' y se le indica a MA que escriba la pila en el SP nuevo.
+	-- Si el registro tiene una escritura pendiente (StallRAW = '1') el SP no se modifica,
+	-- porque la instruccion se vuelve a decodificar en el ciclo siguiente.
+	PROCEDURE DoPush (constant idReg: in integer; constant size: in integer) IS
+
+	VARIABLE spAux: INTEGER;
+
+	BEGIN
+		IDtoMA.mode <= std_logic_vector(to_unsigned(MEM_MEM, IDtoMA.mode'length));
+		IDtoMA.control <= WRITE_STACK_MEM;
+		IDtoMA.datasize <= std_logic_vector(to_unsigned(size, IDtoMA.datasize'length));
+		IDtoMA.source <= std_logic_vector(to_unsigned(MEM_ID, IDtoMA.source'length));
+		IdRegID <= std_logic_vector(to_unsigned(idReg, IdRegID'length));
+		SizeRegID <= std_logic_vector(to_unsigned(size, SizeRegID'length));
+		EnableRegID <= '1';
+		WAIT FOR 1 ns;
+		EnableRegID <= '0';
+		WAIT FOR 1 ns;
+		IDtoMA.data.decode <= DataRegOutID(31 downto 0);
+		if (StallRAW = '0') then
+			IdRegID <= std_logic_vector(to_unsigned(ID_SP, IdRegID'length));
+			SizeRegID <= std_logic_vector(to_unsigned(2, SizeRegID'length));
+			EnableRegID <= '1';
+			WAIT FOR 1 ns;
+			EnableRegID <= '0';
+			WAIT FOR 1 ns;
+			spAux := to_integer(unsigned(DataRegOutID(15 downto 0))) - size;
+			IDtoMA.address <= std_logic_vector(to_unsigned(spAux, IDtoMA.address'length));
+			DataRegInID(31 downto 16) <= "ZZZZZZZZZZZZZZZZ";
+			DataRegInID(15 downto 0) <= std_logic_vector(to_unsigned(spAux, IDtoMA.address'length));
+			EnableRegIDSP <= '1';
+			WAIT FOR 1 ns;
+			EnableRegIDSP <= '0';
+			WAIT FOR 1 ns;
+		end if;
+	END DoPush;
+
+	-- P10: DoPop desapila 'size' bytes y los deja para que WB los escriba en 'idReg'.
+	-- Generaliza la implementacion original de POPH: en esta etapa se toma el SP actual
+	-- como direccion de lectura para MA y se incrementa el SP en 'size'.
+	PROCEDURE DoPop (constant idReg: in integer; constant size: in integer) IS
+
+	VARIABLE spAux: INTEGER;
+
+	BEGIN
+		IDtoMA.mode <= std_logic_vector(to_unsigned(MEM_MEM, IDtoMA.mode'length));
+		IDtoMA.control <= READ_STACK_MEM;
+		IDtoMA.datasize <= std_logic_vector(to_unsigned(size, IDtoMA.datasize'length));
+		IDtoWB.datasize <= std_logic_vector(to_unsigned(size, IDtoWB.datasize'length));
+		IDtoWB.source <= std_logic_vector(to_unsigned(WB_MEM, IDtoWB.source'length));
+		IDtoWB.mode <= std_logic_vector(to_unsigned(idReg + 1, IDtoWB.mode'length));
+		IdRegID <= std_logic_vector(to_unsigned(ID_SP, IdRegID'length));
+		SizeRegID <= std_logic_vector(to_unsigned(2, SizeRegID'length));
+		EnableRegID <= '1';
+		WAIT FOR 1 ns;
+		EnableRegID <= '0';
+		WAIT FOR 1 ns;
+		IDtoMA.address <= DataRegOutID(15 downto 0);
+		spAux := to_integer(unsigned(DataRegOutID(15 downto 0))) + size;
+		DataRegInID(31 downto 16) <= "ZZZZZZZZZZZZZZZZ";
+		DataRegInID(15 downto 0) <= std_logic_vector(to_unsigned(spAux, IDtoMA.address'length));
+		EnableRegIDSP <= '1';
+		WAIT FOR 1 ns;
+		EnableRegIDSP <= '0';
+		WAIT FOR 1 ns;
+	END DoPop;
+
+	BEGIN
 		if (First) then
 			First := false;
 			StallHLT <= '0';
@@ -1546,57 +1615,31 @@ begin
 				if (StallRAW = '0') and (Pipelining) then
 					StallBrEX <= '1';
 				end if;
+			-- P10: manejo de la pila. El operando (si lo hay) es el numero de registro en package1(7 downto 0).
+			WHEN PUSHB =>
+				DoPush(to_integer(unsigned(IFtoIDLocal.package1(7 downto 0))), 1);
+			WHEN POPB =>
+				DoPop(to_integer(unsigned(IFtoIDLocal.package1(7 downto 0))), 1);
 			WHEN PUSHH =>
-				IDtoMA.mode <= std_logic_vector(to_unsigned(MEM_MEM, IDtoMA.mode'length));
-				IDtoMA.control <= WRITE_STACK_MEM;
-				IDtoMA.datasize <= std_logic_vector(to_unsigned(2, IDtoMA.datasize'length));
-				IDtoMA.source <= std_logic_vector(to_unsigned(MEM_ID, IDtoMA.source'length));
-				rfAux := to_integer(unsigned(IFtoIDLocal.package1(7 downto 0)));
-				IdRegID <= std_logic_vector(to_unsigned(rfAux, IdRegID'length));
-				SizeRegID <= std_logic_vector(to_unsigned(2, SizeRegID'length));
-				EnableRegID <= '1';
-				WAIT FOR 1 ns;
-				EnableRegID <= '0';
-				WAIT FOR 1 ns;
-				IDtoMA.data.decode(15 downto 0) <= DataRegOutID(15 downto 0); 
-				if (StallRAW = '0') then
-					IdRegID <= std_logic_vector(to_unsigned(ID_SP, IdRegID'length));
-					SizeRegID <= std_logic_vector(to_unsigned(2, SizeRegID'length));
-					EnableRegID <= '1';
-					WAIT FOR 1 ns;
-					EnableRegID <= '0';
-					WAIT FOR 1 ns;
-					addrAux := to_integer(unsigned(DataRegOutID(15 downto 0))) - 2;
-					IDtoMA.address <= std_logic_vector(to_unsigned(addrAux, IDtoMA.address'length));
-					DataRegInID(31 downto 16) <= "ZZZZZZZZZZZZZZZZ";
-					DataRegInID(15 downto 0) <= std_logic_vector(to_unsigned(addrAux, IDtoMA.address'length));
-					EnableRegIDSP <= '1';
-					WAIT FOR 1 ns;
-					EnableRegIDSP <= '0';
-					WAIT FOR 1 ns;
-				end if;				
+				DoPush(to_integer(unsigned(IFtoIDLocal.package1(7 downto 0))), 2);
 			WHEN POPH =>
-				IDtoMA.mode <= std_logic_vector(to_unsigned(MEM_MEM, IDtoMA.mode'length));
-				IDtoMA.control <= READ_STACK_MEM;
-				IDtoMA.datasize <= std_logic_vector(to_unsigned(2, IDtoMA.datasize'length));
-				IDtoWB.datasize <= std_logic_vector(to_unsigned(2, IDtoWB.datasize'length));
-				IDtoWB.source <= std_logic_vector(to_unsigned(WB_MEM, IDtoWB.source'length));
-				rdAux := to_integer(unsigned(IFtoIDLocal.package1(7 downto 0))) + 1;
-				IDtoWB.mode <= std_logic_vector(to_unsigned(rdAux, IDtoWB.mode'length));
-				IdRegID <= std_logic_vector(to_unsigned(ID_SP, IdRegID'length));
-				SizeRegID <= std_logic_vector(to_unsigned(2, SizeRegID'length));
-				EnableRegID <= '1';
-				WAIT FOR 1 ns;
-				EnableRegID <= '0';
-				WAIT FOR 1 ns;
-				IDtoMA.address <= DataRegOutID(15 downto 0);
-				addrAux := to_integer(unsigned(DataRegOutID(15 downto 0))) + 2;
-				DataRegInID(31 downto 16) <= "ZZZZZZZZZZZZZZZZ";
-				DataRegInID(15 downto 0) <= std_logic_vector(to_unsigned(addrAux, IDtoMA.address'length));
-				EnableRegIDSP <= '1';
-				WAIT FOR 1 ns;
-				EnableRegIDSP <= '0';
-				WAIT FOR 1 ns;
+				DoPop(to_integer(unsigned(IFtoIDLocal.package1(7 downto 0))), 2);
+			WHEN PUSHW =>
+				DoPush(to_integer(unsigned(IFtoIDLocal.package1(7 downto 0))), 4);
+			WHEN POPW =>
+				DoPop(to_integer(unsigned(IFtoIDLocal.package1(7 downto 0))), 4);
+			WHEN PUSHFL =>
+				DoPush(ID_FLAGS, 1);
+			WHEN POPFL =>
+				DoPop(ID_FLAGS, 1);
+			WHEN PUSHFP =>
+				DoPush(ID_FPFLAGS, 1);
+			WHEN POPFP =>
+				DoPop(ID_FPFLAGS, 1);
+			WHEN PUSHRA =>
+				DoPush(ID_RA, 4);
+			WHEN POPRA =>
+				DoPop(ID_RA, 4);
 			WHEN NOP =>
 				WAIT FOR 1 ns;
 			WHEN HALT =>  

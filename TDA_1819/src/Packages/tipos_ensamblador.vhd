@@ -41,6 +41,11 @@ PACKAGE tipos_ensamblador is
 	TYPE instmp_name_array IS ARRAY (POSITIVE RANGE <>) OF STRING(1 to 5);
 	TYPE instmp_code_array IS ARRAY (POSITIVE RANGE <>) OF STD_LOGIC_VECTOR(7 downto 0);
 	TYPE instmp_size_array IS ARRAY (POSITIVE RANGE <>) OF INTEGER;
+
+	-- P10: instrucciones de manejo de pila sin operandos (pushfl, popfl, pushfp, popfp, pushra, popra)
+	TYPE instms_name_array IS ARRAY (POSITIVE RANGE <>) OF STRING(1 to 6);
+	TYPE instms_code_array IS ARRAY (POSITIVE RANGE <>) OF STD_LOGIC_VECTOR(7 downto 0);
+	TYPE instms_size_array IS ARRAY (POSITIVE RANGE <>) OF INTEGER;
 	
 	TYPE instct_name_array IS ARRAY (POSITIVE RANGE <>) OF STRING(1 to 4);
 	TYPE instct_code_array IS ARRAY (POSITIVE RANGE <>) OF STD_LOGIC_VECTOR(7 downto 0);

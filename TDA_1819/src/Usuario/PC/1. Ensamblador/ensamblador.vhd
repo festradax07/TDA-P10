@@ -2162,7 +2162,7 @@ begin
 				end if;
 			end loop;
 			indice := indice + 1;
-			if (cadena(indice) /= ' ') then
+			if ((cadena(indice) /= ' ') and (cadena(indice) /= HT)) then	-- P10: se acepta tabulador
 				if (cadena(indice-1) /= '1') then
 					report "Error en la línea " & integer'image(num_linea) & " del programa '" & trim(nombre) & "': el operando se encuentra incorrectamente declarado"
 					severity FAILURE;
@@ -2181,7 +2181,7 @@ begin
 						severity FAILURE;
 				end case;
 			end if;
-			if (cadena(indice) /= ' ') then
+			if ((cadena(indice) /= ' ') and (cadena(indice) /= HT)) then	-- P10: se acepta tabulador
 				report "Error en la línea " & integer'image(num_linea) & " del programa '" & trim(nombre) & "': el operando se encuentra incorrectamente declarado"
 				severity FAILURE;
 			end if;
@@ -2359,6 +2359,20 @@ begin
 					addr_linea := addr_linea + INSTMP_SIZES(j);
 					for k in INSTMP_NAMES(j)'RANGE loop
 						CompToSM.name_inst(k) <= INSTMP_NAMES(j)(k);
+					end loop;
+					exit;
+				end if;
+			end loop;
+		end if;
+		if (not check) then
+			-- P10: instrucciones de manejo de pila sin operandos. Tienen el mismo formato que
+			-- "nop" y "halt" (cabecera + opcode), por eso se reutiliza checkInstCt.
+			for j in INSTMS_NAMES'RANGE loop
+				checkInstCt(cadena, INSTMS_NAMES(j), INSTMS_CODES(j), INSTMS_SIZES(j), i, check, is_halt, addr_linea);
+				if (check) then
+					addr_linea := addr_linea + INSTMS_SIZES(j);
+					for k in INSTMS_NAMES(j)'RANGE loop
+						CompToSM.name_inst(k) <= INSTMS_NAMES(j)(k);
 					end loop;
 					exit;
 				end if;

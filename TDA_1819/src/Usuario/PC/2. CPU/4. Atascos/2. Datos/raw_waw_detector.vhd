@@ -194,6 +194,9 @@ architecture RAW_WAW_DETECTOR_ARCHITECTURE of raw_waw_detector is
 	SIGNAL F14_WrPending:		UNSIGNED(3 downto 0) := B"0000";
 	SIGNAL F15_WrPending:		UNSIGNED(3 downto 0) := B"0000";
 	SIGNAL FPFLAGS_WrPending:	UNSIGNED(3 downto 0) := B"0000";
+	-- P10: escrituras pendientes en WB de FLAGS (popfl) y RA (popra)
+	SIGNAL FLAGS_WrPending:		UNSIGNED(3 downto 0) := B"0000";
+	SIGNAL RA_WrPending:		UNSIGNED(3 downto 0) := B"0000";
 
 	
 begin
@@ -380,7 +383,10 @@ begin
 			WHEN ID_IP =>
 				NULL;
 			WHEN ID_FLAGS =>
-				NULL;  
+				if (FLAGS_WrPending > 0) then		-- P10: popfl pendiente
+					StallRAW <= '1';
+					IdRegRAW <= IdRegID;
+				end if;
 			WHEN ID_FPFLAGS =>
 				if (FPFLAGS_WrPending > 0) then
 					StallRAW <= '1';
@@ -391,7 +397,10 @@ begin
 			WHEN ID_SP =>
 				NULL;
 			WHEN ID_RA =>
-				NULL;
+				if (RA_WrPending > 0) then			-- P10: popra pendiente
+					StallRAW <= '1';
+					IdRegRAW <= IdRegID;
+				end if;
 			WHEN OTHERS =>
 				NULL;
 		END CASE;
@@ -489,18 +498,18 @@ begin
 				WHEN ID_IP =>
 					NULL;
 				WHEN ID_FLAGS =>
-					NULL;
+					FLAGS_WrPending <= FLAGS_WrPending + 1;		-- P10: popfl
 				WHEN ID_FPFLAGS =>
-					NULL;
+					FPFLAGS_WrPending <= FPFLAGS_WrPending + 1;	-- P10: popfp (DecWrPending ya lo descontaba)
 				WHEN ID_BP =>
 					NULL;
 				WHEN ID_SP =>
 					NULL;
 				WHEN ID_RA =>
-					NULL;
+					RA_WrPending <= RA_WrPending + 1;			-- P10: popra
 				WHEN OTHERS =>
 					NULL;
-			END CASE; 
+			END CASE;
 		end if;
 	END IncWrPending;
 	
@@ -997,7 +1006,10 @@ begin
 				WHEN ID_IP =>
 					NULL;
 				WHEN ID_FLAGS =>
-					NULL;
+					if ((FLAGS_WrPending = 1) and (StallRAW = '1') and (to_integer(unsigned(IdRegRAW)) = ID_FLAGS)) then
+						StallRAW <= '0';
+					end if;
+					FLAGS_WrPending <= FLAGS_WrPending - 1;		-- P10: popfl
 				WHEN ID_FPFLAGS =>
 					if ((FPFLAGS_WrPending = 1) and (StallRAW = '1') and (to_integer(unsigned(IdRegRAW)) = ID_FPFLAGS)) then
 						StallRAW <= '0';
@@ -1008,7 +1020,10 @@ begin
 				WHEN ID_SP =>
 					NULL;
 				WHEN ID_RA =>
-					NULL;
+					if ((RA_WrPending = 1) and (StallRAW = '1') and (to_integer(unsigned(IdRegRAW)) = ID_RA)) then
+						StallRAW <= '0';
+					end if;
+					RA_WrPending <= RA_WrPending - 1;			-- P10: popra
 				WHEN OTHERS =>
 					NULL;
 			END CASE;

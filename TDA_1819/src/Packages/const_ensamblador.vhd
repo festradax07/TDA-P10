@@ -37,7 +37,8 @@ PACKAGE const_ensamblador is
 	CONSTANT CANT_INSTAR:		INTEGER := 21;
 	CONSTANT CANT_INSTLD:		INTEGER := 16;
 	CONSTANT CANT_INSTTC:		INTEGER := 7;
-	CONSTANT CANT_INSTMP:		INTEGER := 2;
+	CONSTANT CANT_INSTMP:		INTEGER := 6;
+	CONSTANT CANT_INSTMS:		INTEGER := 6;
 	CONSTANT CANT_INSTCT:		INTEGER := 2;
 	
 	CONSTANT IS_STRING: 		INTEGER := 1;
@@ -81,9 +82,15 @@ PACKAGE const_ensamblador is
 	CONSTANT INSTTC_CODES:		insttc_code_array(1 to CANT_INSTTC) := (JMP, BEQ, BNE, BEQZ, BNEZ, BFPT, BFPF);
 	CONSTANT INSTTC_SIZES:		insttc_size_array(1 to CANT_INSTTC) := (4, 6, 6, 5, 5, 4, 4);
 	
-	CONSTANT INSTMP_NAMES: 		instmp_name_array(1 to CANT_INSTMP) := ("pushh", "poph ");
-	CONSTANT INSTMP_CODES:		instmp_code_array(1 to CANT_INSTMP) := (PUSHH, POPH);
-	CONSTANT INSTMP_SIZES:		instmp_size_array(1 to CANT_INSTMP) := (3, 3);
+	-- Manejo de pila con un registro como operando (formato: cabecera, opcode, registro)
+	CONSTANT INSTMP_NAMES: 		instmp_name_array(1 to CANT_INSTMP) := ("pushb", "popb ", "pushh", "poph ", "pushw", "popw ");
+	CONSTANT INSTMP_CODES:		instmp_code_array(1 to CANT_INSTMP) := (PUSHB, POPB, PUSHH, POPH, PUSHW, POPW);
+	CONSTANT INSTMP_SIZES:		instmp_size_array(1 to CANT_INSTMP) := (3, 3, 3, 3, 3, 3);
+
+	-- Manejo de pila sin operandos (formato: cabecera, opcode)
+	CONSTANT INSTMS_NAMES: 		instms_name_array(1 to CANT_INSTMS) := ("pushfl", "popfl ", "pushfp", "popfp ", "pushra", "popra ");
+	CONSTANT INSTMS_CODES:		instms_code_array(1 to CANT_INSTMS) := (PUSHFL, POPFL, PUSHFP, POPFP, PUSHRA, POPRA);
+	CONSTANT INSTMS_SIZES:		instms_size_array(1 to CANT_INSTMS) := (2, 2, 2, 2, 2, 2);
 	
 	CONSTANT INSTCT_NAMES: 		instct_name_array(1 to CANT_INSTCT) := ("nop ", "halt");
 	CONSTANT INSTCT_CODES:		instct_code_array(1 to CANT_INSTCT) := (NOP, HALT);
