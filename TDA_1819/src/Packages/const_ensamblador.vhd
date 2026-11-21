@@ -37,8 +37,8 @@ PACKAGE const_ensamblador is
 	CONSTANT CANT_INSTAR:		INTEGER := 21;
 	CONSTANT CANT_INSTLD:		INTEGER := 16;
 	CONSTANT CANT_INSTTC:		INTEGER := 7;
-	CONSTANT CANT_INSTMP:		INTEGER := 6;
-	CONSTANT CANT_INSTMS:		INTEGER := 6;
+	CONSTANT CANT_INSTMP:		INTEGER := 6;		-- TP10 (ej1): antes era 2 (solo pushh y poph)
+	CONSTANT CANT_INSTPE:		INTEGER := 6;		-- TP10 (ej1): pila sin operandos (FLAGS, FPFLAGS, RA)
 	CONSTANT CANT_INSTCT:		INTEGER := 2;
 	
 	CONSTANT IS_STRING: 		INTEGER := 1;
@@ -82,15 +82,14 @@ PACKAGE const_ensamblador is
 	CONSTANT INSTTC_CODES:		insttc_code_array(1 to CANT_INSTTC) := (JMP, BEQ, BNE, BEQZ, BNEZ, BFPT, BFPF);
 	CONSTANT INSTTC_SIZES:		insttc_size_array(1 to CANT_INSTTC) := (4, 6, 6, 5, 5, 4, 4);
 	
-	-- Manejo de pila con un registro como operando (formato: cabecera, opcode, registro)
 	CONSTANT INSTMP_NAMES: 		instmp_name_array(1 to CANT_INSTMP) := ("pushb", "popb ", "pushh", "poph ", "pushw", "popw ");
 	CONSTANT INSTMP_CODES:		instmp_code_array(1 to CANT_INSTMP) := (PUSHB, POPB, PUSHH, POPH, PUSHW, POPW);
 	CONSTANT INSTMP_SIZES:		instmp_size_array(1 to CANT_INSTMP) := (3, 3, 3, 3, 3, 3);
-
-	-- Manejo de pila sin operandos (formato: cabecera, opcode)
-	CONSTANT INSTMS_NAMES: 		instms_name_array(1 to CANT_INSTMS) := ("pushfl", "popfl ", "pushfp", "popfp ", "pushra", "popra ");
-	CONSTANT INSTMS_CODES:		instms_code_array(1 to CANT_INSTMS) := (PUSHFL, POPFL, PUSHFP, POPFP, PUSHRA, POPRA);
-	CONSTANT INSTMS_SIZES:		instms_size_array(1 to CANT_INSTMS) := (2, 2, 2, 2, 2, 2);
+	
+	-- TP10 (ej1): estas no llevan registro, ocupan 2 bytes (cabecera + codigo de operacion) igual que nop y halt
+	CONSTANT INSTPE_NAMES: 		instpe_name_array(1 to CANT_INSTPE) := ("pushfl", "popfl ", "pushfp", "popfp ", "pushra", "popra ");
+	CONSTANT INSTPE_CODES:		instpe_code_array(1 to CANT_INSTPE) := (PUSHFL, POPFL, PUSHFP, POPFP, PUSHRA, POPRA);
+	CONSTANT INSTPE_SIZES:		instpe_size_array(1 to CANT_INSTPE) := (2, 2, 2, 2, 2, 2);
 	
 	CONSTANT INSTCT_NAMES: 		instct_name_array(1 to CANT_INSTCT) := ("nop ", "halt");
 	CONSTANT INSTCT_CODES:		instct_code_array(1 to CANT_INSTCT) := (NOP, HALT);

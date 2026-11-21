@@ -129,13 +129,6 @@ architecture REGISTROS_ARCHITECTURE of registros is
     SIGNAL SP: 			std_logic_vector(15 downto 0) := std_logic_vector(to_unsigned(BASE_POINTER, 16));
 						-- SP = Stack Pointer = Puntero de Pila
 	SIGNAL RA: 			std_logic_vector(31 downto 0) := X"00000000";
-
-	-- P10: escritura de FLAGS y FPFLAGS desde la etapa WB (popfl / popfp). Cada registro sigue
-	-- teniendo un unico proceso que lo escribe (ALU_Write / FPU_Write) para evitar dos drivers.
-	SIGNAL FlagsWB:			std_logic_vector(7 downto 0);
-	SIGNAL EnableFlagsWB:	std_logic := '0';
-	SIGNAL FPFlagsWB:		std_logic_vector(7 downto 0);
-	SIGNAL EnableFPFlagsWB:	std_logic := '0';
 						-- RA = Return Address = Dirección de Retorno (Subrutina)
 	
 	-- Registros de Uso General	por el Usuario 
@@ -174,6 +167,14 @@ architecture REGISTROS_ARCHITECTURE of registros is
 	SIGNAL F13:			std_logic_vector(31 downto 0) := X"00000000";
 	SIGNAL F14:			std_logic_vector(31 downto 0) := X"00000000";
 	SIGNAL F15:			std_logic_vector(31 downto 0) := X"00000000";
+	
+	-- TP10 (ej1): señales auxiliares para que la etapa WB pueda escribir FLAGS y FPFLAGS (popfl / popfp).
+	-- No se puede asignar FLAGS directamente desde el proceso Writeback porque ya lo maneja ALU_Write
+	-- y quedarian dos drivers sobre la misma señal (en la simulacion aparecia 'X').
+	SIGNAL FlagsWB:			std_logic_vector(7 downto 0);
+	SIGNAL FPFlagsWB:		std_logic_vector(7 downto 0);
+	SIGNAL EnableFlagsWB:	std_logic := '0';
+	SIGNAL EnableFPFlagsWB:	std_logic := '0';
 
 	
 begin
@@ -405,11 +406,12 @@ begin
 	ALU_Write: PROCESS
 	
 	BEGIN
-		WAIT UNTIL rising_edge(EnableRegEXALUWr) or rising_edge(EnableFlagsWB);
+		-- TP10 (ej1): ahora FLAGS se puede escribir desde la ALU o desde WB (popfl)
+		WAIT UNTIL (rising_edge(EnableRegEXALUWr) or rising_edge(EnableFlagsWB));
 		if (EnableRegEXALUWr = '1') then
 			FLAGS <= DataRegInEXALU(7 downto 0);
 		else
-			FLAGS <= FlagsWB;		-- P10: popfl
+			FLAGS <= FlagsWB;
 		end if;
 	END PROCESS ALU_Write;
 	
@@ -425,11 +427,12 @@ begin
 	FPU_Write: PROCESS
 	
 	BEGIN
-		WAIT UNTIL rising_edge(EnableRegEXFPUWr) or rising_edge(EnableFPFlagsWB);
+		-- TP10 (ej1): ahora FPFLAGS se puede escribir desde la FPU o desde WB (popfp)
+		WAIT UNTIL (rising_edge(EnableRegEXFPUWr) or rising_edge(EnableFPFlagsWB));
 		if (EnableRegEXFPUWr = '1') then
 			FPFLAGS <= DataRegInEXFPU(7 downto 0);
 		else
-			FPFLAGS <= FPFlagsWB;	-- P10: popfp
+			FPFLAGS <= FPFlagsWB;
 		end if;
 	END PROCESS FPU_Write;
 	
@@ -801,11 +804,13 @@ begin
 				EnableRegFP <= '0';
 				WAIT FOR 1 ns;			
 			WHEN ID_FLAGS =>
+				-- TP10 (ej1): popfl
 				FlagsWB <= DataRegInWB(7 downto 0);
 				EnableFlagsWB <= '1';
 				WAIT FOR 1 ns;
 				EnableFlagsWB <= '0';
 			WHEN ID_FPFLAGS =>
+				-- TP10 (ej1): popfp
 				FPFlagsWB <= DataRegInWB(7 downto 0);
 				EnableFPFlagsWB <= '1';
 				WAIT FOR 1 ns;
