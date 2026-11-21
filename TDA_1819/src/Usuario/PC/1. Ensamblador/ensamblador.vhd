@@ -56,6 +56,9 @@
 -- corresponde a una instrucción de control del procesador. En caso afirmativo, representa 
 -- en código máquina su respectivo código de operación y lo almacena en la memoria de 
 -- instrucciones de la PC.
+-- checkInstPe(): (agregado TP10) Comprueba si la línea actual es una instrucción de manejo de
+-- la pila que no lleva operandos (pushfl, popfl, pushfp, popfp, pushra, popra). Si es así,
+-- guarda en la memoria de instrucciones la cabecera y el código de operación (2 bytes).
 -- checkCode(): Comprueba que ninguna de las líneas de la sección de instrucciones del programa 
 -- posea errores de sintaxis.
 -- checkOffsets(): Comprueba que todas las direcciones de salto definidas en las instrucciones de
@@ -2162,7 +2165,7 @@ begin
 				end if;
 			end loop;
 			indice := indice + 1;
-			if ((cadena(indice) /= ' ') and (cadena(indice) /= HT)) then	-- P10: se acepta tabulador
+			if (cadena(indice) /= ' ') then
 				if (cadena(indice-1) /= '1') then
 					report "Error en la línea " & integer'image(num_linea) & " del programa '" & trim(nombre) & "': el operando se encuentra incorrectamente declarado"
 					severity FAILURE;
@@ -2181,7 +2184,7 @@ begin
 						severity FAILURE;
 				end case;
 			end if;
-			if ((cadena(indice) /= ' ') and (cadena(indice) /= HT)) then	-- P10: se acepta tabulador
+			if (cadena(indice) /= ' ') then
 				report "Error en la línea " & integer'image(num_linea) & " del programa '" & trim(nombre) & "': el operando se encuentra incorrectamente declarado"
 				severity FAILURE;
 			end if;
@@ -2265,6 +2268,58 @@ begin
 			check := false;
 		end if;
 	END checkInstCt;
+	
+	
+	-- TP10 (ej1): lo armamos copiando checkInstCt, porque estas instrucciones tampoco tienen operandos.
+	-- La diferencia es que no hay que fijarse si es halt, y que revisamos que despues del nombre
+	-- no venga otra letra (sino "popfl" tambien aceptaria cosas como "popflx").
+	PROCEDURE checkInstPe(CONSTANT cadena, INSTPE_NAME: IN STRING; CONSTANT INSTPE_CODE: STD_LOGIC_VECTOR(7 downto 0);
+						  CONSTANT INSTPE_SIZE: IN INTEGER; i: INOUT INTEGER; check: INOUT BOOLEAN;
+						  CONSTANT addr_linea: IN INTEGER) IS
+	
+	VARIABLE match: BOOLEAN := true;
+	VARIABLE indice: INTEGER := i;
+						   
+	BEGIN
+		for j in INSTPE_NAME'RANGE loop
+			if (INSTPE_NAME(j) = ' ') then
+				exit;
+			end if;
+			if (cadena(indice) /= INSTPE_NAME(j)) then
+				match := false;
+				exit;
+			end if;
+			indice := indice + 1;
+		end loop;
+		if (match) then
+			if (isLetter(cadena(indice))) then
+				check := false;
+				return;
+			end if;
+			-- byte 0: cabecera (tamaño de la instruccion)
+			InstAddrBusComp <= std_logic_vector(to_unsigned(addr_linea, InstAddrBusComp'length));
+			InstDataBusOutComp <= std_logic_vector(to_unsigned(INSTPE_SIZE, InstDataBusOutComp'length));
+			InstSizeBusComp <= std_logic_vector(to_unsigned(1, InstSizeBusComp'length));
+			InstCtrlBusComp <= WRITE_INST_MEM;
+			EnableCompToInstMem <= '1';
+			WAIT FOR 1 ns;
+			EnableCompToInstMem <= '0';	
+			WAIT FOR 1 ns;
+			-- byte 1: codigo de operacion
+			InstAddrBusComp <= std_logic_vector(to_unsigned(addr_linea+1, InstAddrBusComp'length));
+			InstDataBusOutComp <= "ZZZZZZZZZZZZZZZZZZZZZZZZ" & INSTPE_CODE;
+			InstSizeBusComp <= std_logic_vector(to_unsigned(1, InstSizeBusComp'length));
+			InstCtrlBusComp <= WRITE_INST_MEM;
+			EnableCompToInstMem <= '1';
+			WAIT FOR 1 ns;
+			EnableCompToInstMem <= '0';
+			WAIT FOR 1 ns;
+			i := indice;
+			check := true;
+		else
+			check := false;
+		end if;
+	END checkInstPe;
 	
 	
 	PROCEDURE checkCode(labels: INOUT label_records; cant_labels: INOUT INTEGER;
@@ -2364,15 +2419,14 @@ begin
 				end if;
 			end loop;
 		end if;
+		-- TP10 (ej1): instrucciones de pila sin operandos
 		if (not check) then
-			-- P10: instrucciones de manejo de pila sin operandos. Tienen el mismo formato que
-			-- "nop" y "halt" (cabecera + opcode), por eso se reutiliza checkInstCt.
-			for j in INSTMS_NAMES'RANGE loop
-				checkInstCt(cadena, INSTMS_NAMES(j), INSTMS_CODES(j), INSTMS_SIZES(j), i, check, is_halt, addr_linea);
-				if (check) then
-					addr_linea := addr_linea + INSTMS_SIZES(j);
-					for k in INSTMS_NAMES(j)'RANGE loop
-						CompToSM.name_inst(k) <= INSTMS_NAMES(j)(k);
+			for j in INSTPE_NAMES'RANGE loop
+				checkInstPe(cadena, INSTPE_NAMES(j), INSTPE_CODES(j), INSTPE_SIZES(j), i, check, addr_linea);
+				if (check) then	
+					addr_linea := addr_linea + INSTPE_SIZES(j);
+					for k in INSTPE_NAMES(j)'RANGE loop
+						CompToSM.name_inst(k) <= INSTPE_NAMES(j)(k);
 					end loop;
 					exit;
 				end if;

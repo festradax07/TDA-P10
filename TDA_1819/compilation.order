@@ -17,7 +17,7 @@
 .\src\Usuario\PC\1. Ensamblador\ensamblador.vhd
 .\src\Usuario\PC\2. CPU\cpu.vhd
 .\src\Usuario\PC\2. CPU\1. UI\ui.vhd
-.\src\Usuario\PC\2. CPU\1. UI\1. Máquina de Estados\states_machine.vhd
+.\src\Usuario\PC\2. CPU\1. UI\1. Maquina de Estados\states_machine.vhd
 .\src\Usuario\PC\2. CPU\1. UI\2. Registros FP\registros_fp.vhd
 .\src\Usuario\PC\2. CPU\2. Etapas\etapas.vhd
 .\src\Usuario\PC\2. CPU\2. Etapas\1. Fetch\fetch.vhd

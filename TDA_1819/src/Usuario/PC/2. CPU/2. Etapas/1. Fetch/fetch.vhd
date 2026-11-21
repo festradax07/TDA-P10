@@ -87,6 +87,13 @@ begin
 		if (StallRAW = '1') then							  
 			WAIT UNTIL falling_edge(StallRAW);
 			WAIT UNTIL rising_edge(EnableIF);
+			-- TP10: si mientras esperabamos aparecio OTRO atasco RAW (la misma instruccion se frena dos
+			-- veces seguidas, por ejemplo "dsub r5, r2, r3" justo despues de cargar r2 y r3), hay que
+			-- seguir esperando. Antes se buscaba igual la instruccion siguiente y se perdia una.
+			while (StallRAW = '1') loop
+				WAIT UNTIL falling_edge(StallRAW);
+				WAIT UNTIL rising_edge(EnableIF);
+			end loop;
 			--WAIT UNTIL rising_edge(EnableIF);
 			if (StallBrEX = '1') then
 				WAIT UNTIL rising_edge(EnableIF);
