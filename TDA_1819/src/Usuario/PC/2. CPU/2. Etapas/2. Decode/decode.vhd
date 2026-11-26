@@ -1658,7 +1658,6 @@ begin
 				WAIT FOR 1 ns;
 				IDtoMA.address <= DataRegOutID(15 downto 0);
 				addrAux := to_integer(unsigned(DataRegOutID(15 downto 0))) + 2;
-				-- guardo el SP nuevo (lo escribe el proceso SP_Write de registros.vhd)
 				DataRegInID(31 downto 16) <= "ZZZZZZZZZZZZZZZZ";
 				DataRegInID(15 downto 0) <= std_logic_vector(to_unsigned(addrAux, IDtoMA.address'length));
 				EnableRegIDSP <= '1';
@@ -1938,6 +1937,7 @@ begin
 				IDtoMA.address <= DataRegOutID(15 downto 0);
 				-- SP nuevo = SP + 4, para cuando termine de leer
 				addrAux := to_integer(unsigned(DataRegOutID(15 downto 0))) + 4;
+				-- guardo el SP nuevo (lo escribe el proceso SP_Write de registros.vhd)
 				DataRegInID(31 downto 16) <= "ZZZZZZZZZZZZZZZZ";
 				DataRegInID(15 downto 0) <= std_logic_vector(to_unsigned(addrAux, IDtoMA.address'length));
 				EnableRegIDSP <= '1';
