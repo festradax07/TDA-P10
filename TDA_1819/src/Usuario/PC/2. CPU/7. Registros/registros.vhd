@@ -408,6 +408,7 @@ begin
 	BEGIN
 		-- TP10 (ej1): ahora FLAGS se puede escribir desde la ALU o desde WB (popfl)
 		WAIT UNTIL (rising_edge(EnableRegEXALUWr) or rising_edge(EnableFlagsWB));
+		-- si el pedido vino de la ALU escribo su resultado; si no, el byte que desapilo WB (popfl)
 		if (EnableRegEXALUWr = '1') then
 			FLAGS <= DataRegInEXALU(7 downto 0);
 		else
@@ -429,6 +430,7 @@ begin
 	BEGIN
 		-- TP10 (ej1): ahora FPFLAGS se puede escribir desde la FPU o desde WB (popfp)
 		WAIT UNTIL (rising_edge(EnableRegEXFPUWr) or rising_edge(EnableFPFlagsWB));
+		-- si el pedido vino de la FPU escribo su resultado; si no, el byte que desapilo WB (popfp)
 		if (EnableRegEXFPUWr = '1') then
 			FPFLAGS <= DataRegInEXFPU(7 downto 0);
 		else
@@ -806,12 +808,14 @@ begin
 			WHEN ID_FLAGS =>
 				-- TP10 (ej1): popfl
 				FlagsWB <= DataRegInWB(7 downto 0);
+				-- pulso para que ALU_Write copie FlagsWB en FLAGS
 				EnableFlagsWB <= '1';
 				WAIT FOR 1 ns;
 				EnableFlagsWB <= '0';
 			WHEN ID_FPFLAGS =>
 				-- TP10 (ej1): popfp
 				FPFlagsWB <= DataRegInWB(7 downto 0);
+				-- pulso para que FPU_Write copie FPFlagsWB en FPFLAGS
 				EnableFPFlagsWB <= '1';
 				WAIT FOR 1 ns;
 				EnableFPFlagsWB <= '0';

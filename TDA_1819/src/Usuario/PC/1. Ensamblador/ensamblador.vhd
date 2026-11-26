@@ -2277,10 +2277,12 @@ begin
 						  CONSTANT INSTPE_SIZE: IN INTEGER; i: INOUT INTEGER; check: INOUT BOOLEAN;
 						  CONSTANT addr_linea: IN INTEGER) IS
 	
+	-- match: si la linea coincide con el nombre; indice: letra de la linea que estoy comparando
 	VARIABLE match: BOOLEAN := true;
 	VARIABLE indice: INTEGER := i;
 						   
 	BEGIN
+		-- comparo letra por letra con el nombre (el espacio de relleno, como en "popfl ", marca el final)
 		for j in INSTPE_NAME'RANGE loop
 			if (INSTPE_NAME(j) = ' ') then
 				exit;
@@ -2292,6 +2294,7 @@ begin
 			indice := indice + 1;
 		end loop;
 		if (match) then
+			-- si despues del nombre viene otra letra, no es esta instruccion
 			if (isLetter(cadena(indice))) then
 				check := false;
 				return;
@@ -2314,6 +2317,7 @@ begin
 			WAIT FOR 1 ns;
 			EnableCompToInstMem <= '0';
 			WAIT FOR 1 ns;
+			-- la encontramos: i queda apuntando despues del nombre
 			i := indice;
 			check := true;
 		else
@@ -2421,10 +2425,13 @@ begin
 		end if;
 		-- TP10 (ej1): instrucciones de pila sin operandos
 		if (not check) then
+			-- pruebo con cada una de las 6 (pushfl, popfl, pushfp, popfp, pushra, popra)
 			for j in INSTPE_NAMES'RANGE loop
 				checkInstPe(cadena, INSTPE_NAMES(j), INSTPE_CODES(j), INSTPE_SIZES(j), i, check, addr_linea);
 				if (check) then	
+					-- la proxima instruccion se guarda 2 bytes mas adelante
 					addr_linea := addr_linea + INSTPE_SIZES(j);
+					-- le paso el nombre a la maquina de estados para que se vea en la simulacion
 					for k in INSTPE_NAMES(j)'RANGE loop
 						CompToSM.name_inst(k) <= INSTPE_NAMES(j)(k);
 					end loop;

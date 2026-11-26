@@ -1548,10 +1548,12 @@ begin
 				end if;
 			WHEN PUSHB =>
 				-- TP10 (ej1): apila los 8 bits menos significativos de rf (SP = SP - 1)
+				-- le aviso a MA que va a escribir 1 byte en la pila, y que el dato se lo paso yo (MEM_ID)
 				IDtoMA.mode <= std_logic_vector(to_unsigned(MEM_MEM, IDtoMA.mode'length));
 				IDtoMA.control <= WRITE_STACK_MEM;
 				IDtoMA.datasize <= std_logic_vector(to_unsigned(1, IDtoMA.datasize'length));
 				IDtoMA.source <= std_logic_vector(to_unsigned(MEM_ID, IDtoMA.source'length));
+				-- leo rf: su numero viene en el byte que sigue al opcode
 				rfAux := to_integer(unsigned(IFtoIDLocal.package1(7 downto 0)));
 				IdRegID <= std_logic_vector(to_unsigned(rfAux, IdRegID'length));
 				SizeRegID <= std_logic_vector(to_unsigned(1, SizeRegID'length));
@@ -1559,7 +1561,9 @@ begin
 				WAIT FOR 1 ns;
 				EnableRegID <= '0';
 				WAIT FOR 1 ns;
+				-- dejo el dato a apilar en el paquete de MA
 				IDtoMA.data.decode(7 downto 0) <= DataRegOutID(7 downto 0); 
+				-- solo si no hay atasco RAW: si lo hay, la instruccion se repite y el SP se moveria dos veces
 				if (StallRAW = '0') then
 					-- primero se decrementa el SP y despues se guarda en esa direccion (igual que pushh)
 					IdRegID <= std_logic_vector(to_unsigned(ID_SP, IdRegID'length));
@@ -1568,8 +1572,10 @@ begin
 					WAIT FOR 1 ns;
 					EnableRegID <= '0';
 					WAIT FOR 1 ns;
+					-- SP nuevo = SP - 1 (la pila crece hacia abajo); MA escribe en esa direccion
 					addrAux := to_integer(unsigned(DataRegOutID(15 downto 0))) - 1;
 					IDtoMA.address <= std_logic_vector(to_unsigned(addrAux, IDtoMA.address'length));
+					-- guardo el SP nuevo (lo escribe el proceso SP_Write de registros.vhd)
 					DataRegInID(31 downto 16) <= "ZZZZZZZZZZZZZZZZ";
 					DataRegInID(15 downto 0) <= std_logic_vector(to_unsigned(addrAux, IDtoMA.address'length));
 					EnableRegIDSP <= '1';
@@ -1579,13 +1585,17 @@ begin
 				end if;
 			WHEN POPB =>
 				-- TP10 (ej1): desapila 1 byte y lo carga en rd (SP = SP + 1)
+				-- le aviso a MA que va a leer 1 byte de la pila
 				IDtoMA.mode <= std_logic_vector(to_unsigned(MEM_MEM, IDtoMA.mode'length));
 				IDtoMA.control <= READ_STACK_MEM;
 				IDtoMA.datasize <= std_logic_vector(to_unsigned(1, IDtoMA.datasize'length));
+				-- WB va a cargar 1 byte en el registro destino, con el dato que lea MA (WB_MEM)
 				IDtoWB.datasize <= std_logic_vector(to_unsigned(1, IDtoWB.datasize'length));
 				IDtoWB.source <= std_logic_vector(to_unsigned(WB_MEM, IDtoWB.source'length));
+				-- el numero de rd viene en el byte que sigue al opcode; se le suma 1 porque 0 (WB_NULL) es no escribir
 				rdAux := to_integer(unsigned(IFtoIDLocal.package1(7 downto 0))) + 1;
 				IDtoWB.mode <= std_logic_vector(to_unsigned(rdAux, IDtoWB.mode'length));
+				-- leo el SP (siempre 16 bits)
 				IdRegID <= std_logic_vector(to_unsigned(ID_SP, IdRegID'length));
 				SizeRegID <= std_logic_vector(to_unsigned(2, SizeRegID'length));
 				EnableRegID <= '1';
@@ -1594,7 +1604,9 @@ begin
 				WAIT FOR 1 ns;
 				-- se lee de la direccion actual del SP y despues se incrementa
 				IDtoMA.address <= DataRegOutID(15 downto 0);
+				-- SP nuevo = SP + 1, para cuando termine de leer
 				addrAux := to_integer(unsigned(DataRegOutID(15 downto 0))) + 1;
+				-- guardo el SP nuevo (lo escribe el proceso SP_Write de registros.vhd)
 				DataRegInID(31 downto 16) <= "ZZZZZZZZZZZZZZZZ";
 				DataRegInID(15 downto 0) <= std_logic_vector(to_unsigned(addrAux, IDtoMA.address'length));
 				EnableRegIDSP <= '1';
@@ -1646,6 +1658,7 @@ begin
 				WAIT FOR 1 ns;
 				IDtoMA.address <= DataRegOutID(15 downto 0);
 				addrAux := to_integer(unsigned(DataRegOutID(15 downto 0))) + 2;
+				-- guardo el SP nuevo (lo escribe el proceso SP_Write de registros.vhd)
 				DataRegInID(31 downto 16) <= "ZZZZZZZZZZZZZZZZ";
 				DataRegInID(15 downto 0) <= std_logic_vector(to_unsigned(addrAux, IDtoMA.address'length));
 				EnableRegIDSP <= '1';
@@ -1654,10 +1667,12 @@ begin
 				WAIT FOR 1 ns;
 			WHEN PUSHW =>
 				-- TP10 (ej1): apila los 32 bits de rf (SP = SP - 4)
+				-- le aviso a MA que va a escribir 4 bytes en la pila, y que el dato se lo paso yo (MEM_ID)
 				IDtoMA.mode <= std_logic_vector(to_unsigned(MEM_MEM, IDtoMA.mode'length));
 				IDtoMA.control <= WRITE_STACK_MEM;
 				IDtoMA.datasize <= std_logic_vector(to_unsigned(4, IDtoMA.datasize'length));
 				IDtoMA.source <= std_logic_vector(to_unsigned(MEM_ID, IDtoMA.source'length));
+				-- leo rf: su numero viene en el byte que sigue al opcode
 				rfAux := to_integer(unsigned(IFtoIDLocal.package1(7 downto 0)));
 				IdRegID <= std_logic_vector(to_unsigned(rfAux, IdRegID'length));
 				SizeRegID <= std_logic_vector(to_unsigned(4, SizeRegID'length));
@@ -1665,7 +1680,9 @@ begin
 				WAIT FOR 1 ns;
 				EnableRegID <= '0';
 				WAIT FOR 1 ns;
+				-- dejo el dato a apilar en el paquete de MA
 				IDtoMA.data.decode(31 downto 0) <= DataRegOutID(31 downto 0); 
+				-- solo si no hay atasco RAW: si lo hay, la instruccion se repite y el SP se moveria dos veces
 				if (StallRAW = '0') then
 					-- primero se decrementa el SP y despues se guarda en esa direccion (igual que pushh)
 					IdRegID <= std_logic_vector(to_unsigned(ID_SP, IdRegID'length));
@@ -1674,8 +1691,10 @@ begin
 					WAIT FOR 1 ns;
 					EnableRegID <= '0';
 					WAIT FOR 1 ns;
+					-- SP nuevo = SP - 4 (la pila crece hacia abajo); MA escribe en esa direccion
 					addrAux := to_integer(unsigned(DataRegOutID(15 downto 0))) - 4;
 					IDtoMA.address <= std_logic_vector(to_unsigned(addrAux, IDtoMA.address'length));
+					-- guardo el SP nuevo (lo escribe el proceso SP_Write de registros.vhd)
 					DataRegInID(31 downto 16) <= "ZZZZZZZZZZZZZZZZ";
 					DataRegInID(15 downto 0) <= std_logic_vector(to_unsigned(addrAux, IDtoMA.address'length));
 					EnableRegIDSP <= '1';
@@ -1685,13 +1704,17 @@ begin
 				end if;
 			WHEN POPW =>
 				-- TP10 (ej1): desapila 4 bytes (word) y los carga en rd (SP = SP + 4)
+				-- le aviso a MA que va a leer 4 bytes de la pila
 				IDtoMA.mode <= std_logic_vector(to_unsigned(MEM_MEM, IDtoMA.mode'length));
 				IDtoMA.control <= READ_STACK_MEM;
 				IDtoMA.datasize <= std_logic_vector(to_unsigned(4, IDtoMA.datasize'length));
+				-- WB va a cargar 4 bytes en el registro destino, con el dato que lea MA (WB_MEM)
 				IDtoWB.datasize <= std_logic_vector(to_unsigned(4, IDtoWB.datasize'length));
 				IDtoWB.source <= std_logic_vector(to_unsigned(WB_MEM, IDtoWB.source'length));
+				-- el numero de rd viene en el byte que sigue al opcode; se le suma 1 porque 0 (WB_NULL) es no escribir
 				rdAux := to_integer(unsigned(IFtoIDLocal.package1(7 downto 0))) + 1;
 				IDtoWB.mode <= std_logic_vector(to_unsigned(rdAux, IDtoWB.mode'length));
+				-- leo el SP (siempre 16 bits)
 				IdRegID <= std_logic_vector(to_unsigned(ID_SP, IdRegID'length));
 				SizeRegID <= std_logic_vector(to_unsigned(2, SizeRegID'length));
 				EnableRegID <= '1';
@@ -1700,7 +1723,9 @@ begin
 				WAIT FOR 1 ns;
 				-- se lee de la direccion actual del SP y despues se incrementa
 				IDtoMA.address <= DataRegOutID(15 downto 0);
+				-- SP nuevo = SP + 4, para cuando termine de leer
 				addrAux := to_integer(unsigned(DataRegOutID(15 downto 0))) + 4;
+				-- guardo el SP nuevo (lo escribe el proceso SP_Write de registros.vhd)
 				DataRegInID(31 downto 16) <= "ZZZZZZZZZZZZZZZZ";
 				DataRegInID(15 downto 0) <= std_logic_vector(to_unsigned(addrAux, IDtoMA.address'length));
 				EnableRegIDSP <= '1';
@@ -1709,6 +1734,7 @@ begin
 				WAIT FOR 1 ns;
 			WHEN PUSHFL =>
 				-- TP10 (ej1): apila el registro FLAGS de la ALU (8 bits)
+				-- le aviso a MA que va a escribir 1 byte en la pila, y que el dato se lo paso yo (MEM_ID)
 				IDtoMA.mode <= std_logic_vector(to_unsigned(MEM_MEM, IDtoMA.mode'length));
 				IDtoMA.control <= WRITE_STACK_MEM;
 				IDtoMA.datasize <= std_logic_vector(to_unsigned(1, IDtoMA.datasize'length));
@@ -1716,13 +1742,16 @@ begin
 				-- si la instruccion anterior uso la ALU, escribe FLAGS en el mismo instante en que
 				-- decode lo lee y se apilaba el valor viejo. Esperamos 2 ns y listo.
 				WAIT FOR 2 ns;
+				-- leo FLAGS: esta instruccion no lleva operando, el registro es siempre el mismo
 				IdRegID <= std_logic_vector(to_unsigned(ID_FLAGS, IdRegID'length));
 				SizeRegID <= std_logic_vector(to_unsigned(1, SizeRegID'length));
 				EnableRegID <= '1';
 				WAIT FOR 1 ns;
 				EnableRegID <= '0';
 				WAIT FOR 1 ns;
+				-- dejo el dato a apilar en el paquete de MA
 				IDtoMA.data.decode(7 downto 0) <= DataRegOutID(7 downto 0); 
+				-- solo si no hay atasco RAW: si lo hay, la instruccion se repite y el SP se moveria dos veces
 				if (StallRAW = '0') then
 					-- primero se decrementa el SP y despues se guarda en esa direccion (igual que pushh)
 					IdRegID <= std_logic_vector(to_unsigned(ID_SP, IdRegID'length));
@@ -1731,8 +1760,10 @@ begin
 					WAIT FOR 1 ns;
 					EnableRegID <= '0';
 					WAIT FOR 1 ns;
+					-- SP nuevo = SP - 1 (la pila crece hacia abajo); MA escribe en esa direccion
 					addrAux := to_integer(unsigned(DataRegOutID(15 downto 0))) - 1;
 					IDtoMA.address <= std_logic_vector(to_unsigned(addrAux, IDtoMA.address'length));
+					-- guardo el SP nuevo (lo escribe el proceso SP_Write de registros.vhd)
 					DataRegInID(31 downto 16) <= "ZZZZZZZZZZZZZZZZ";
 					DataRegInID(15 downto 0) <= std_logic_vector(to_unsigned(addrAux, IDtoMA.address'length));
 					EnableRegIDSP <= '1';
@@ -1742,13 +1773,16 @@ begin
 				end if;
 			WHEN POPFL =>
 				-- TP10 (ej1): desapila 1 byte y lo carga en FLAGS (se escribe en la etapa WB)
+				-- le aviso a MA que va a leer 1 byte de la pila
 				IDtoMA.mode <= std_logic_vector(to_unsigned(MEM_MEM, IDtoMA.mode'length));
 				IDtoMA.control <= READ_STACK_MEM;
 				IDtoMA.datasize <= std_logic_vector(to_unsigned(1, IDtoMA.datasize'length));
+				-- WB va a cargar 1 byte en el registro destino, con el dato que lea MA (WB_MEM)
 				IDtoWB.datasize <= std_logic_vector(to_unsigned(1, IDtoWB.datasize'length));
 				IDtoWB.source <= std_logic_vector(to_unsigned(WB_MEM, IDtoWB.source'length));
 				rdAux := ID_FLAGS + 1;	-- el +1 es porque WB_NULL vale 0 (igual que en el resto)
 				IDtoWB.mode <= std_logic_vector(to_unsigned(rdAux, IDtoWB.mode'length));
+				-- leo el SP (siempre 16 bits)
 				IdRegID <= std_logic_vector(to_unsigned(ID_SP, IdRegID'length));
 				SizeRegID <= std_logic_vector(to_unsigned(2, SizeRegID'length));
 				EnableRegID <= '1';
@@ -1757,7 +1791,9 @@ begin
 				WAIT FOR 1 ns;
 				-- se lee de la direccion actual del SP y despues se incrementa
 				IDtoMA.address <= DataRegOutID(15 downto 0);
+				-- SP nuevo = SP + 1, para cuando termine de leer
 				addrAux := to_integer(unsigned(DataRegOutID(15 downto 0))) + 1;
+				-- guardo el SP nuevo (lo escribe el proceso SP_Write de registros.vhd)
 				DataRegInID(31 downto 16) <= "ZZZZZZZZZZZZZZZZ";
 				DataRegInID(15 downto 0) <= std_logic_vector(to_unsigned(addrAux, IDtoMA.address'length));
 				EnableRegIDSP <= '1';
@@ -1766,6 +1802,7 @@ begin
 				WAIT FOR 1 ns;
 			WHEN PUSHFP =>
 				-- TP10 (ej1): apila el registro FPFLAGS de la FPU (8 bits)
+				-- le aviso a MA que va a escribir 1 byte en la pila, y que el dato se lo paso yo (MEM_ID)
 				IDtoMA.mode <= std_logic_vector(to_unsigned(MEM_MEM, IDtoMA.mode'length));
 				IDtoMA.control <= WRITE_STACK_MEM;
 				IDtoMA.datasize <= std_logic_vector(to_unsigned(1, IDtoMA.datasize'length));
@@ -1773,13 +1810,16 @@ begin
 				-- la FPU escribe FPFLAGS en el mismo instante en que decode lo lee (lo vimos en la simulacion:
 				-- se apilaba el valor viejo), asi que esperamos unos ns para leerlo ya actualizado
 				WAIT FOR 6 ns;
+				-- leo FPFLAGS: esta instruccion no lleva operando, el registro es siempre el mismo
 				IdRegID <= std_logic_vector(to_unsigned(ID_FPFLAGS, IdRegID'length));
 				SizeRegID <= std_logic_vector(to_unsigned(1, SizeRegID'length));
 				EnableRegID <= '1';
 				WAIT FOR 1 ns;
 				EnableRegID <= '0';
 				WAIT FOR 1 ns;
+				-- dejo el dato a apilar en el paquete de MA
 				IDtoMA.data.decode(7 downto 0) <= DataRegOutID(7 downto 0); 
+				-- solo si no hay atasco RAW: si lo hay, la instruccion se repite y el SP se moveria dos veces
 				if (StallRAW = '0') then
 					-- primero se decrementa el SP y despues se guarda en esa direccion (igual que pushh)
 					IdRegID <= std_logic_vector(to_unsigned(ID_SP, IdRegID'length));
@@ -1788,8 +1828,10 @@ begin
 					WAIT FOR 1 ns;
 					EnableRegID <= '0';
 					WAIT FOR 1 ns;
+					-- SP nuevo = SP - 1 (la pila crece hacia abajo); MA escribe en esa direccion
 					addrAux := to_integer(unsigned(DataRegOutID(15 downto 0))) - 1;
 					IDtoMA.address <= std_logic_vector(to_unsigned(addrAux, IDtoMA.address'length));
+					-- guardo el SP nuevo (lo escribe el proceso SP_Write de registros.vhd)
 					DataRegInID(31 downto 16) <= "ZZZZZZZZZZZZZZZZ";
 					DataRegInID(15 downto 0) <= std_logic_vector(to_unsigned(addrAux, IDtoMA.address'length));
 					EnableRegIDSP <= '1';
@@ -1799,9 +1841,11 @@ begin
 				end if;
 			WHEN POPFP =>
 				-- TP10 (ej1): desapila 1 byte y lo carga en FPFLAGS (se escribe en la etapa WB)
+				-- le aviso a MA que va a leer 1 byte de la pila
 				IDtoMA.mode <= std_logic_vector(to_unsigned(MEM_MEM, IDtoMA.mode'length));
 				IDtoMA.control <= READ_STACK_MEM;
 				IDtoMA.datasize <= std_logic_vector(to_unsigned(1, IDtoMA.datasize'length));
+				-- WB va a cargar 1 byte en el registro destino, con el dato que lea MA (WB_MEM)
 				IDtoWB.datasize <= std_logic_vector(to_unsigned(1, IDtoWB.datasize'length));
 				IDtoWB.source <= std_logic_vector(to_unsigned(WB_MEM, IDtoWB.source'length));
 				rdAux := ID_FPFLAGS + 1;	-- el +1 es porque WB_NULL vale 0 (igual que en el resto)
@@ -1815,7 +1859,9 @@ begin
 				WAIT FOR 1 ns;
 				EnableRegID <= '0';
 				WAIT FOR 1 ns;
+				-- solo si no hay atasco RAW: si lo hay, la instruccion se repite y el SP se moveria dos veces
 				if (StallRAW = '0') then
+					-- leo el SP (siempre 16 bits)
 					IdRegID <= std_logic_vector(to_unsigned(ID_SP, IdRegID'length));
 					SizeRegID <= std_logic_vector(to_unsigned(2, SizeRegID'length));
 					EnableRegID <= '1';
@@ -1824,7 +1870,9 @@ begin
 					WAIT FOR 1 ns;
 					-- se lee de la direccion actual del SP y despues se incrementa
 					IDtoMA.address <= DataRegOutID(15 downto 0);
+					-- SP nuevo = SP + 1, para cuando termine de leer
 					addrAux := to_integer(unsigned(DataRegOutID(15 downto 0))) + 1;
+					-- guardo el SP nuevo (lo escribe el proceso SP_Write de registros.vhd)
 					DataRegInID(31 downto 16) <= "ZZZZZZZZZZZZZZZZ";
 					DataRegInID(15 downto 0) <= std_logic_vector(to_unsigned(addrAux, IDtoMA.address'length));
 					EnableRegIDSP <= '1';
@@ -1834,17 +1882,21 @@ begin
 				end if;
 			WHEN PUSHRA =>
 				-- TP10 (ej1): apila los 32 bits del registro RA (direccion de retorno)
+				-- le aviso a MA que va a escribir 4 bytes en la pila, y que el dato se lo paso yo (MEM_ID)
 				IDtoMA.mode <= std_logic_vector(to_unsigned(MEM_MEM, IDtoMA.mode'length));
 				IDtoMA.control <= WRITE_STACK_MEM;
 				IDtoMA.datasize <= std_logic_vector(to_unsigned(4, IDtoMA.datasize'length));
 				IDtoMA.source <= std_logic_vector(to_unsigned(MEM_ID, IDtoMA.source'length));
+				-- leo RA: esta instruccion no lleva operando, el registro es siempre el mismo
 				IdRegID <= std_logic_vector(to_unsigned(ID_RA, IdRegID'length));
 				SizeRegID <= std_logic_vector(to_unsigned(4, SizeRegID'length));
 				EnableRegID <= '1';
 				WAIT FOR 1 ns;
 				EnableRegID <= '0';
 				WAIT FOR 1 ns;
+				-- dejo el dato a apilar en el paquete de MA
 				IDtoMA.data.decode(31 downto 0) <= DataRegOutID(31 downto 0); 
+				-- solo si no hay atasco RAW: si lo hay, la instruccion se repite y el SP se moveria dos veces
 				if (StallRAW = '0') then
 					-- primero se decrementa el SP y despues se guarda en esa direccion (igual que pushh)
 					IdRegID <= std_logic_vector(to_unsigned(ID_SP, IdRegID'length));
@@ -1853,8 +1905,10 @@ begin
 					WAIT FOR 1 ns;
 					EnableRegID <= '0';
 					WAIT FOR 1 ns;
+					-- SP nuevo = SP - 4 (la pila crece hacia abajo); MA escribe en esa direccion
 					addrAux := to_integer(unsigned(DataRegOutID(15 downto 0))) - 4;
 					IDtoMA.address <= std_logic_vector(to_unsigned(addrAux, IDtoMA.address'length));
+					-- guardo el SP nuevo (lo escribe el proceso SP_Write de registros.vhd)
 					DataRegInID(31 downto 16) <= "ZZZZZZZZZZZZZZZZ";
 					DataRegInID(15 downto 0) <= std_logic_vector(to_unsigned(addrAux, IDtoMA.address'length));
 					EnableRegIDSP <= '1';
@@ -1864,13 +1918,16 @@ begin
 				end if;
 			WHEN POPRA =>
 				-- TP10 (ej1): desapila 4 bytes y los carga en RA (se escribe en la etapa WB)
+				-- le aviso a MA que va a leer 4 bytes de la pila
 				IDtoMA.mode <= std_logic_vector(to_unsigned(MEM_MEM, IDtoMA.mode'length));
 				IDtoMA.control <= READ_STACK_MEM;
 				IDtoMA.datasize <= std_logic_vector(to_unsigned(4, IDtoMA.datasize'length));
+				-- WB va a cargar 4 bytes en el registro destino, con el dato que lea MA (WB_MEM)
 				IDtoWB.datasize <= std_logic_vector(to_unsigned(4, IDtoWB.datasize'length));
 				IDtoWB.source <= std_logic_vector(to_unsigned(WB_MEM, IDtoWB.source'length));
 				rdAux := ID_RA + 1;	-- el +1 es porque WB_NULL vale 0 (igual que en el resto)
 				IDtoWB.mode <= std_logic_vector(to_unsigned(rdAux, IDtoWB.mode'length));
+				-- leo el SP (siempre 16 bits)
 				IdRegID <= std_logic_vector(to_unsigned(ID_SP, IdRegID'length));
 				SizeRegID <= std_logic_vector(to_unsigned(2, SizeRegID'length));
 				EnableRegID <= '1';
@@ -1879,6 +1936,7 @@ begin
 				WAIT FOR 1 ns;
 				-- se lee de la direccion actual del SP y despues se incrementa
 				IDtoMA.address <= DataRegOutID(15 downto 0);
+				-- SP nuevo = SP + 4, para cuando termine de leer
 				addrAux := to_integer(unsigned(DataRegOutID(15 downto 0))) + 4;
 				DataRegInID(31 downto 16) <= "ZZZZZZZZZZZZZZZZ";
 				DataRegInID(15 downto 0) <= std_logic_vector(to_unsigned(addrAux, IDtoMA.address'length));
