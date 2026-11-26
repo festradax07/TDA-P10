@@ -82,9 +82,6 @@ PACKAGE const_ensamblador is
 	CONSTANT INSTTC_CODES:		insttc_code_array(1 to CANT_INSTTC) := (JMP, BEQ, BNE, BEQZ, BNEZ, BFPT, BFPF);
 	CONSTANT INSTTC_SIZES:		insttc_size_array(1 to CANT_INSTTC) := (4, 6, 6, 5, 5, 4, 4);
 	
-	-- TP10 (ej1): a la lista de pushh/poph se le suman pushb/popb (1 byte) y pushw/popw (4 bytes).
-	-- Las tres listas van en el mismo orden; los nombres se completan con espacios hasta 5 letras.
-	-- Los codigos (PUSHB, POPB, ...) ya estaban definidos en repert_cpu.vhd. Ocupan 3 bytes: cabecera + opcode + registro
 	CONSTANT INSTMP_NAMES: 		instmp_name_array(1 to CANT_INSTMP) := ("pushb", "popb ", "pushh", "poph ", "pushw", "popw ");
 	CONSTANT INSTMP_CODES:		instmp_code_array(1 to CANT_INSTMP) := (PUSHB, POPB, PUSHH, POPH, PUSHW, POPW);
 	CONSTANT INSTMP_SIZES:		instmp_size_array(1 to CANT_INSTMP) := (3, 3, 3, 3, 3, 3);

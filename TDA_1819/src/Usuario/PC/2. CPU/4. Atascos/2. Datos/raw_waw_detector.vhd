@@ -1014,16 +1014,13 @@ begin
 					if ((FLAGS_WrPending = 1) and (StallRAW = '1') and (to_integer(unsigned(IdRegRAW)) = ID_FLAGS)) then
 						StallRAW <= '0';
 					end if;
-					-- una escritura pendiente menos
 					FLAGS_WrPending <= FLAGS_WrPending - 1;
 				WHEN ID_FPFLAGS =>
 					-- TP10 (ej1): antes aca se descontaba FPFLAGS_WrPending, pero ese contador es el de la FPU
 					-- (lo descuenta DecFPWrPending). Ahora WB solo escribe FPFLAGS con popfp.
 					if ((FPFLAGSWB_WrPending = 1) and (FPFLAGS_WrPending = 0) and (StallRAW = '1') and (to_integer(unsigned(IdRegRAW)) = ID_FPFLAGS)) then
-						-- era la ultima escritura pendiente y alguien esperaba este registro: lo libero
 						StallRAW <= '0';
 					end if;
-					-- una escritura pendiente menos (la de popfp)
 					FPFLAGSWB_WrPending <= FPFLAGSWB_WrPending - 1;
 				WHEN ID_BP =>
 					NULL;
@@ -1032,10 +1029,8 @@ begin
 				WHEN ID_RA =>
 					-- TP10 (ej1): popra termino de escribir RA en WB
 					if ((RA_WrPending = 1) and (StallRAW = '1') and (to_integer(unsigned(IdRegRAW)) = ID_RA)) then
-						-- era la ultima escritura pendiente y alguien esperaba este registro: lo libero
 						StallRAW <= '0';
 					end if;
-					-- una escritura pendiente menos
 					RA_WrPending <= RA_WrPending - 1;
 				WHEN OTHERS =>
 					NULL;

@@ -91,7 +91,6 @@ begin
 			-- veces seguidas, por ejemplo "dsub r5, r2, r3" justo despues de cargar r2 y r3), hay que
 			-- seguir esperando. Antes se buscaba igual la instruccion siguiente y se perdia una.
 			while (StallRAW = '1') loop
-				-- misma espera que arriba: que termine el atasco y despues el proximo ciclo
 				WAIT UNTIL falling_edge(StallRAW);
 				WAIT UNTIL rising_edge(EnableIF);
 			end loop;
