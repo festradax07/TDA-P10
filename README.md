@@ -35,7 +35,7 @@ es que quedo compilada una version vieja: hacer Compile All de nuevo.
 - `src/Usuario/usuario.vhd`
 
 Programas: `src/Assembler/pila_sin.asm`, `pila_con.asm`, `pila_esp.asm`
-y las pruebas auxiliares `prueba_popfl.asm` y `prueba_raw.asm`.
+y las pruebas auxiliares `prueba_popfl.asm`, `prueba_popfp.asm` y `prueba_raw.asm`.
 
 La carpeta `1. Maquina de Estados` esta sin tilde a proposito: con la tilde el nombre
 se rompia al comprimir/descomprimir y el proyecto no compilaba.
@@ -154,6 +154,9 @@ En una copia del TDA_1819 original de la catedra (sin nuestros cambios), copiar 
 - **prueba_popfl.asm** (fin a los 2000 ns): FLAGS pasa a ZZ100001 con el dsub, popfl lo
   vuelve a ZZ000001 y despues el daddi lo deja en ZZ000000. R12 = FFFFFFFB (-5),
   R15 = FFFFFFFB (popw) y R14 = 000000FB (popb).
+- **prueba_popfp.asm** (fin a los 3100 ns): ltf deja F = 1, pushfp y popfp lo mantienen, y despues eqf lo pone
+  en F = 0. bfpt MAL no tiene que saltar, asi que R5 = 00000007 y RES = 7. Si diera 1,
+  popfp habria pisado el resultado de eqf.
 - **prueba_raw.asm** (fin a los 1400 ns): R5 = 00000006, R9 = 00000005 y R10 = 00000006.
   Prueba el caso del dsub que se atasca dos veces seguidas (fetch.vhd).
 
